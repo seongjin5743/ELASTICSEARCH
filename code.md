@@ -1,6 +1,4 @@
-# code
-
-- mapping
+# mapping
 
 ```bash
 # 스키마리스 방식으로 인덱스 생성
@@ -77,7 +75,7 @@ POST /movie/_doc
 GET /movie
 ```
 
-- 데이터 타입
+# 데이터 타입
 
 ```bash
 # 인덱스 생성
@@ -175,7 +173,7 @@ POST _analyze
 }
 ```
 
-- CRUD
+# CRUD
 
 ```bash
 # CRUD
@@ -196,7 +194,7 @@ DELETE movie_mapping/_doc/1
 GET movie/_search
 ```
 
-- 검색
+# 검색
 
 ```bash
 # URL 검색
