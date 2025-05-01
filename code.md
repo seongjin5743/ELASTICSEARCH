@@ -295,3 +295,553 @@ GET /movie/_search
     }
 }
 ```
+
+# 검색 2
+```bash
+GET /kibana_sample_data_ecommerce/_search
+
+POST _aliases
+{
+    "actions": [
+        {
+            "add": {
+                "index": "kibana_sample_data_ecommerce",
+                "alias": "ecommerce"
+            }
+        }
+    ]
+}
+
+
+GET /ecommerce/_search
+{
+    "query": {
+        "match_all": {}
+    }
+}
+
+GET /ecommerce/_mapping
+
+# match query
+GET /ecommerce/_search
+{
+    "query": {
+        "match": {
+          "customer_full_name": "Mary Bailey"
+        }
+    }
+}
+
+# multi match
+GET /ecommerce/_search
+{
+    "query": {
+        "multi_match": {
+          "query": "dark",
+          "fields": ["category", "products.product_name"]
+        }
+    }
+}
+
+
+# term query
+GET /ecommerce/_search
+{
+    "query": {
+        "term": {
+          "day_of_week": {
+            "value": "Monday"
+          }
+        }
+    }
+}
+
+# bool query
+GET /ecommerce/_search
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                "match": {
+                      "category": "clothing"
+                    }
+                }
+            ],
+            "must_not": [
+                {
+                    "term": {
+                      "day_of_week": {
+                        "value": "Monday"
+                      }
+                    }
+                }
+            ],
+            "should": [],
+            "filter": [
+                {
+                    "range": {
+                      "taxful_total_price": {
+                        "gte": 1,
+                        "lte": 50
+                      }
+                    }
+                }
+            ]
+        }
+    }
+}
+
+
+# prefix 
+GET /ecommerce/_search
+{
+    "query": {
+        "prefix": {
+          "category": {
+            "value": "me"
+          }
+        }
+    }
+}
+
+
+# exists
+GET /ecommerce/_search
+{
+    "query": {
+        "exists": {
+            "field": "currency"
+        }
+    }
+}
+
+# wildcard
+GET /ecommerce/_search
+{
+    "query": {
+        "wildcard": {
+          "customer_first_name": {
+            "value": "E?????",
+            "case_insensitive": true
+          }
+        }
+    }
+}
+
+```
+
+
+# 분석기 커스텀
+
+```bash
+POST _analyze
+{
+    "analyzer": "standard",
+    "text": "Hello world!!!!"
+}
+
+POST _analyze
+{
+    "analyzer": "whitespace",
+    "text": "Hello world!!!!"
+}
+
+POST _analyze
+{
+    "analyzer": "standard",
+    "text": "Is this Déjà vu?"
+}
+
+
+POST _analyze
+{
+    "tokenizer": "standard",
+    "filter": ["lowercase", "asciifolding"],
+    "text": "Is this Déjà vu?",
+    "explain": true
+}
+
+
+# for english
+PUT /article
+{
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "my_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "standard",
+                    "filter": [
+                        "lowercase", 
+                        "asciifolding"
+                        ]
+                }
+            }
+        }
+    },
+
+    "mappings": {
+        "properties": {
+            "content": {
+                "type": "text",
+                "analyzer": "my_analyzer"
+            }
+        }
+    }
+}
+
+GET /article/_analyze
+{
+    "analyzer": "my_analyzer",
+    "text": "Is this Déjà vu?"
+}
+
+DELETE /article
+
+
+# ver.2
+PUT /article
+{
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "my_analyzer": {
+                    "type": "custom",
+                    "char_filter": ["html_strip"],
+                    "tokenizer": "standard",
+                    "filter": [
+                        "lowercase",
+                        "asciifolding",
+                        "stemmer"
+                    ]
+                }
+            }
+        }
+    },
+
+    "mappings": {
+        "properties": {
+            "content": {
+                "type": "text",
+                "analyzer": "my_analyzer"
+            }
+        }
+    }
+}
+
+POST /article/_analyze
+{
+    "field": "content",
+    "text": "<b>Is this Déjà vu?<b>. foxes are jumping",
+    "explain": true
+}
+
+POST /article/_doc
+{
+    "content": "<b>Is this Déjà vu?<b>. foxes are jumping"
+}
+
+POST /article/_doc
+{
+    "content": "<b>Is this Déjà vu?<b>. foxes are jumped"
+}
+
+GET /article/_search?q=content:jump
+GET /article/_search?q=content:deja
+​
+```
+
+# 집계
+```bash
+GET /kibana_sample_data_logs/_search
+
+POST _aliases
+{
+    "actions": [
+      {
+        "add": {
+          "index": "kibana_sample_data_logs",
+          "alias": "logs"
+        }
+      }
+    ]
+}
+
+GET /logs/_mapping
+GET /logs/_search
+
+
+
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "region_count": {
+      "terms": {
+        "field": "ip"
+      }
+    }
+  }
+}
+
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "region_count": {
+      "terms": {
+        "field": "geo.dest"
+      }
+    }
+  }
+}
+
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "status_count": {
+      "terms": {
+        "field": "response.keyword"
+      }
+    }
+  }
+}
+
+
+# 합산 / 평균 / 최대 / 최소
+GET /logs/_search?size=0
+{ 
+  "query": {
+    "match": {
+      "geo.dest": "CN"
+    }
+  },
+
+  "aggs": {
+    "total_bytes": {
+      "sum": {
+        "field": "bytes"
+      }
+    }
+  }
+}
+
+
+
+# value_count
+GET /logs/_search?size=0
+{
+  "query": {
+    "match": {
+      "geo.dest": "CN"
+    }
+  },
+  "aggs": {
+    "count": {
+      "value_count": {
+        "field": "ip"
+      }
+    }
+  }
+}
+
+
+# state / extended_stats
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "stats": {
+      "extended_stats": {
+        "field": "bytes"
+      }
+    }
+  }
+}
+
+
+# cardinality
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "card": {
+      "cardinality": {
+        "field": "geo.dest"
+      }
+    }
+  }
+}
+
+
+# percentiles
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "percent": {
+      "percentiles": {
+        "field": "bytes"
+      }
+    }
+  }
+}
+
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "percent": {
+      "percentiles": {
+        "field": "bytes",
+        "percents": [10, 50, 90]
+      }
+    }
+  }
+}
+
+
+
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "percent": {
+      "percentile_ranks": {
+        "field": "bytes",
+        "values": [100, 9999]
+      }
+    }
+  }
+}
+
+
+# 지형 집계
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "viewport": {
+      "geo_bounds": {
+        "field": "geo.coordinates"
+      }
+    }
+  }
+}
+
+
+
+# 버킷 집계
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "byte_range": {
+      "range": {
+        "field": "bytes",
+        "ranges": [
+          {
+            "from": 1000,
+            "to": 2000
+          },
+          {
+            "from": 2000,
+            "to": 3000
+          }
+        ]
+      }
+    }
+  }
+}
+
+
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "date-count": {
+      "date_range": {
+        "field": "@timestamp",
+        "ranges": [
+          {
+            "from": "2025-06-09T11:12:29.904Z",
+            "to": "2025-06-09T12:12:29.904Z"
+          }
+        ]
+      }
+    }
+  }
+}
+
+
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "byte_histo": {
+      "histogram": {
+        "field": "bytes",
+        "interval": 5000
+      }
+    }
+  }
+}
+
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "date_histo": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "calendar_interval": "1d"
+      }
+    }
+  }
+}
+
+
+
+# pipeline 
+# 형제 집계
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "date_histo": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "calendar_interval": "1d"
+      },
+      "aggs": {
+        "bytes_sum": {
+          "sum": {
+            "field": "bytes"
+          }
+        }
+      }
+    },
+    "min_bytes": {
+      "min_bucket": {
+        "buckets_path": "date_histo>bytes_sum"
+      }
+    }
+  }
+}
+
+
+# 부모자식 집계
+# 날짜별 데이터 증가폭 출력
+GET /logs/_search?size=0
+{
+  "aggs": {
+    "date_histo": {
+      "date_histogram": {
+        "field": "@timestamp",
+        "calendar_interval": "1d"
+      },
+      "aggs": {
+        "bytes_max": {
+          "max": {
+            "field": "bytes"
+          }
+        },
+        "max_deriv": {
+          "derivative": {
+            "buckets_path": "bytes_max"
+          }
+        }
+      }
+    }
+  }
+}
+
+```
