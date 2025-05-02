@@ -1,0 +1,110 @@
+<!-- 
+**elasticsearch.yml 설정**
+
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+http.cors.allow-methods: "OPTIONS, HEAD, GET, POST, PUT, DELETE, PATCH"
+http.cors.allow-headers: "Authorization, Content-Type, X-Requested-With"
+http.cors.allow-credentials: false
+-->
+
+<!-- 
+chrome에 인증서 추가필요 
+설정 > 개인 정보 보호 및 보안 > 보안 > 인증서 관리 > 맞춤설정 > 사용자가 설치 >신뢰할 수 있는 인증서
+
+config > certs > http_ca.crt > 인증서 추가
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자동완성 기능</title>
+    <style>
+        #suggestions {
+            border: 1px solid #ccc;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+        }
+        .suggestion-item {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>자동완성 입력박스ㅁㅁㅁ</h1>
+<input type="text" id="autocomplete" placeholder="상품명을 입력하세요..." />
+<div id="suggestions"></div>
+
+<script>
+    const serverAddress = 'https://localhost:9200'; 
+    const apiKey = 'TnB6NmpwWUJoWEsyMnduOWtJN206QU5WV0EyV00zMURFSE5ZOW44Zm1UUQ==';  // API 키
+
+    document.getElementById('autocomplete').addEventListener('input', async function() {
+        const query = this.value;
+
+        if (query.length < 2) {
+            // 입력이 2글자 미만일 경우 자동완성 제안 숨김
+            document.getElementById('suggestions').style.display = 'none';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${serverAddress}/product/_search`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `ApiKey ${apiKey}` 
+                },
+                body: JSON.stringify({
+                    suggest: {
+                        my_suggest: {
+                            prefix: query,
+                            completion: {
+                                field: "name"
+                            }
+                        }
+                    }
+                })
+            });
+
+            const data = await response.json();
+
+            // 추천 결과를 표시
+            const suggestionsDiv = document.getElementById('suggestions');
+            suggestionsDiv.innerHTML = ''; // 이전 결과 초기화
+
+            if (data.suggest.my_suggest.length > 0) {
+                const options = data.suggest.my_suggest[0].options;
+
+                options.forEach(option => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.textContent = option._source.name; // 추천 상품명
+                    div.onclick = function() {
+                        document.getElementById('autocomplete').value = option._source.name; // 선택된 추천값을 입력란에 표시
+                        suggestionsDiv.style.display = 'none'; // 추천 결과 숨김
+                    };
+                    suggestionsDiv.appendChild(div);
+                });
+
+                suggestionsDiv.style.display = 'block'; // 추천 결과 표시
+            } else {
+                suggestionsDiv.style.display = 'none'; // 추천 결과 없을 시 숨김
+            }
+
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+        }
+    });
+</script>
+
+</body>
+</html>
